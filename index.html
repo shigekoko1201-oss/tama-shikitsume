@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>球のしきつめ — 円と球</title>
+<style>
+  :root{
+    --c-radius:#e53935;   /* 半径 赤 */
+    --c-diameter:#1e88e5; /* 直径 青 */
+    --c-tate:#2e7d32;     /* たて 緑 */
+    --c-yoko:#ef6c00;     /* 横 だいだい */
+    --c-height:#8e24aa;   /* 高さ むらさき */
+    --paper:#fffdf5;
+    --ink:#333;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"BIZ UDPGothic","Yu Gothic UI","Hiragino Kaku Gothic ProN",sans-serif;
+    background:#eef3f6; color:var(--ink);
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  }
+  /* ── 上部バー ── */
+  #topbar{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background:#fff; padding:8px 16px; border-bottom:3px solid #cdd8e0;
+  }
+  #topbar h1{font-size:20px; color:#546e7a; margin-right:4px; white-space:nowrap;}
+  .seg{display:flex; border:2px solid #90a4ae; border-radius:12px; overflow:hidden;}
+  .seg button{
+    font-size:19px; padding:8px 14px; border:none; background:#fff; cursor:pointer;
+    font-family:inherit; white-space:nowrap;
+  }
+  .seg button.on{background:#1565c0; color:#fff; font-weight:bold;}
+  .seg button:disabled{color:#bbb; background:#f4f4f4; cursor:default;}
+  .numset{display:flex; align-items:center; gap:6px; font-size:19px;}
+  .numset input{
+    width:64px; font-size:22px; text-align:center; padding:4px;
+    border:2px solid #90a4ae; border-radius:8px; font-family:inherit;
+  }
+  .btn{
+    font-size:19px; padding:8px 16px; border-radius:12px; cursor:pointer;
+    border:2px solid #1565c0; background:#e3f2fd; color:#0d47a1; font-family:inherit;
+    white-space:nowrap;
+  }
+  .btn:active{transform:translateY(1px);}
+  #warn{color:#c62828; font-size:17px; font-weight:bold;}
+
+  /* ── 本体 ── */
+  #main{flex:1; display:flex; min-height:0; gap:10px; padding:10px;}
+  #left{flex:1.55; display:flex; flex-direction:column; min-width:0;}
+  #problem{
+    background:var(--paper); border:3px solid #d7ccc8; border-radius:14px;
+    font-size:clamp(20px,2.6vh,30px); line-height:1.5; padding:10px 18px; margin-bottom:8px;
+    font-weight:bold;
+  }
+  #figwrap{flex:1; position:relative; background:var(--paper); border:3px solid #d7ccc8; border-radius:14px; min-height:0;}
+  #fig{width:100%; height:100%; display:block;}
+  #viewBtn{
+    position:absolute; top:10px; right:10px;
+    font-size:20px; padding:10px 18px; border-radius:12px; cursor:pointer;
+    border:3px solid #00897b; background:#e0f2f1; color:#00695c; font-family:inherit; font-weight:bold;
+  }
+  /* ── 右パネル(小問) ── */
+  #panel{
+    flex:1; background:var(--paper); border:3px solid #d7ccc8; border-radius:14px;
+    padding:12px 16px; overflow-y:auto; min-width:330px;
+  }
+  .sq{margin-bottom:14px; border-bottom:2px dashed #cfd8dc; padding-bottom:10px;}
+  .sq .qt{font-size:clamp(19px,2.4vh,26px); font-weight:bold;}
+  .sq .shiki{
+    font-size:clamp(26px,3.6vh,40px); font-weight:bold; margin:6px 0 0 26px;
+    letter-spacing:2px;
+  }
+  .sq .kotae{
+    font-size:clamp(24px,3.4vh,36px); font-weight:bold; margin:4px 0 0 26px;
+  }
+  .sq .kotae .val{
+    background:#fff3e0; border:3px solid #ef6c00; border-radius:10px; padding:2px 14px;
+  }
+  .hidden{visibility:hidden;}
+  .ghost{color:#c5cdd2;}
+
+  /* ── 下部バー ── */
+  #bottombar{
+    display:flex; align-items:center; gap:14px; padding:10px 16px;
+    background:#fff; border-top:3px solid #cdd8e0;
+  }
+  #nextBtn{
+    font-size:30px; font-weight:bold; padding:12px 60px; border-radius:16px; cursor:pointer;
+    border:none; background:#1565c0; color:#fff; font-family:inherit;
+  }
+  #nextBtn:disabled{background:#b0bec5; cursor:default;}
+  #backBtn,#resetBtn{
+    font-size:22px; padding:10px 24px; border-radius:14px; cursor:pointer;
+    border:2px solid #90a4ae; background:#fff; color:#455a64; font-family:inherit;
+  }
+  #stepInfo{font-size:19px; color:#78909c; margin-left:auto;}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>球のしきつめ</h1>
+  <div class="seg" id="typeSeg">
+    <button data-type="jun">はこの長さをもとめる</button>
+    <button data-type="gyaku">半径をもとめる</button>
+  </div>
+  <div class="seg" id="arrSeg">
+    <button data-arr="row">1列</button>
+    <button data-arr="grid">たて・横にならぶ</button>
+  </div>
+  <span class="numset" id="numset"></span>
+  <button class="btn" id="applyBtn">この数で出題</button>
+  <button class="btn" id="randBtn">つぎの問題</button>
+  <span id="warn"></span>
+</div>
+
+<div id="main">
+  <div id="left">
+    <div id="problem"></div>
+    <div id="figwrap">
+      <svg id="fig" viewBox="0 0 960 560" preserveAspectRatio="xMidYMid meet"></svg>
+      <button id="viewBtn">真上から見る</button>
+    </div>
+  </div>
+  <div id="panel"></div>
+</div>
+
+<div id="bottombar">
+  <button id="nextBtn">つぎへ ▶</button>
+  <button id="backBtn">◀ ひとつもどる</button>
+  <button id="resetBtn">リセット</button>
+  <span id="stepInfo"></span>
+</div>
+
+<script>
+'use strict';
+// ============================== 状態 ==============================
+const S = {
+  type:'jun',   // 'jun'=順算(箱の長さ) / 'gyaku'=逆算(半径)
+  arr:'row',    // 'row'=1列 / 'grid'=格子 (逆算はrow固定)
+  r:4, n:5,     // 半径・1列の個数 (教科書p.113の初期値)
+  rows:2, cols:3, // 格子のたて個数・横個数
+  view:'3d',    // '3d' / 'top'
+  step:0,
+};
+const CR = getComputedStyle(document.documentElement);
+const COL = {
+  radius: CR.getPropertyValue('--c-radius').trim(),
+  diameter: CR.getPropertyValue('--c-diameter').trim(),
+  tate: CR.getPropertyValue('--c-tate').trim(),
+  yoko: CR.getPropertyValue('--c-yoko').trim(),
+  height: CR.getPropertyValue('--c-height').trim(),
+};
+
+function d(){ return S.r*2; }
+function mCols(){ return S.arr==='grid' ? S.cols : S.n; }   // 横方向の個数
+function mRows(){ return S.arr==='grid' ? S.rows : 1; }     // たて方向の個数
+function tate(){ return d()*mRows(); }
+function yoko(){ return d()*mCols(); }
+function ballCount(){ return mRows()*mCols(); }
+
+// ============================== ステップ定義 ==============================
+// q:小問番号を表示 / flag:補助線 / f:式と答えを表示 / view:自動切替
+function buildSteps(){
+  if(S.type==='jun'){
+    return [
+      {q:1},
+      {flag:'radius', view:'top'},
+      {flag:'diameter', f:1},
+      {q:2},
+      {flag:'tate', f:2},
+      {q:3},
+      {flag:'yoko', f:3},
+      {q:4},
+      {flag:'height', f:4, view:'3d'},
+    ];
+  }
+  return [
+    {q:1},
+    {flag:'divide', view:'top'},
+    {f:1},
+    {q:2},
+    {flag:'radius', f:2},
+  ];
+}
+function revealed(){
+  const steps = buildSteps();
+  const rv = {q:new Set(), f:new Set(), flags:new Set()};
+  for(let i=0;i<S.step;i++){
+    const st = steps[i];
+    if(st.q) rv.q.add(st.q);
+    if(st.f) rv.f.add(st.f);
+    if(st.flag) rv.flags.add(st.flag);
+  }
+  return rv;
+}
+function autoViewAt(step){
+  const steps = buildSteps();
+  let v = '3d';
+  for(let i=0;i<step;i++){ if(steps[i].view) v = steps[i].view; }
+  return v;
+}
+
+// ============================== 問題文 ==============================
+function problemText(){
+  if(S.type==='jun'){
+    if(S.arr==='row'){
+      return `半径 ${S.r}cm のボールが ${S.n}こ、図のように <u>1列に</u>ぴったり箱に入っています。`;
+    }
+    return `半径 ${S.r}cm のボールが ${ballCount()}こ、図のように たてに${S.rows}こ、横に${S.cols}こずつ ぴったり箱に入っています。`;
+  }
+  return `ボールが ${S.n}こ、図のように1列にぴったり箱に入っています。箱の横の長さは <b style="color:${COL.yoko}">${yoko()}cm</b> です。`;
+}
+
+// ============================== 小問パネル ==============================
+function subQuestions(){
+  if(S.type==='jun'){
+    const items = [
+      {no:1, q:'ボールの直径は、何cmですか。', col:COL.diameter,
+       shiki:`${S.r}×2＝${d()}`, kotae:`${d()}cm`},
+      {no:2, q:'箱のたての長さは、何cmですか。', col:COL.tate,
+       shiki: S.arr==='grid' ? `${d()}×${S.rows}＝${tate()}` : `直径1こ分`,
+       kotae:`${tate()}cm`},
+      {no:3, q:'箱の横の長さは、何cmですか。', col:COL.yoko,
+       shiki:`${d()}×${mCols()}＝${yoko()}`, kotae:`${yoko()}cm`},
+      {no:4, q:'箱の高さは、何cmですか。', col:COL.height,
+       shiki:`直径1こ分`, kotae:`${d()}cm`},
+    ];
+    return items;
+  }
+  return [
+    {no:1, q:'ボールの直径は、何cmですか。', col:COL.diameter,
+     shiki:`${yoko()}÷${S.n}＝${d()}`, kotae:`${d()}cm`},
+    {no:2, q:'ボールの半径は、何cmですか。', col:COL.radius,
+     shiki:`${d()}÷2＝${S.r}`, kotae:`${S.r}cm`},
+  ];
+}
+const MARU = ['','①','②','③','④'];
+function renderPanel(){
+  const rv = revealed();
+  const panel = document.getElementById('panel');
+  panel.innerHTML = subQuestions().map(it=>{
+    const qOn = rv.q.has(it.no);
+    const fOn = rv.f.has(it.no);
+    return `<div class="sq">
+      <div class="qt ${qOn?'':'ghost'}">${qOn ? MARU[it.no]+'　'+it.q : MARU[it.no]+'　？'}</div>
+      <div class="shiki ${fOn?'':'hidden'}" style="color:${it.col}">${it.shiki}</div>
+      <div class="kotae ${fOn?'':'hidden'}">答え　<span class="val">${it.kotae}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ============================== 図: 真上図 ==============================
+const NS='http://www.w3.org/2000/svg';
+function svgEl(tag,attrs,text){
+  const el = document.createElementNS(NS,tag);
+  for(const k in attrs) el.setAttribute(k,attrs[k]);
+  if(text!=null) el.textContent = text;
+  return el;
+}
+function txt(g,x,y,str,size,color,anchor,bold){
+  g.appendChild(svgEl('text',{x,y,'font-size':size,fill:color||'#333',
+    'text-anchor':anchor||'middle','font-weight':bold===false?'normal':'bold',
+    'font-family':'inherit'},str));
+}
+function line(g,x1,y1,x2,y2,color,w,dash){
+  const a={x1,y1,x2,y2,stroke:color,'stroke-width':w||4,'stroke-linecap':'round'};
+  if(dash) a['stroke-dasharray']=dash;
+  g.appendChild(svgEl('line',a));
+}
+// ブラケット(寸法線): 両端に短いヒゲ付き
+function bracket(g,x1,y1,x2,y2,color,tick){
+  line(g,x1,y1,x2,y2,color,5);
+  const t = tick||12;
+  if(y1===y2){ line(g,x1,y1-t,x1,y1+t,color,5); line(g,x2,y2-t,x2,y2+t,color,5); }
+  else { line(g,x1-t,y1,x1+t,y1,color,5); line(g,x2-t,y2,x2+t,y2,color,5); }
+}
+
+function drawTop(fig){
+  const rv = revealed();
+  const flags = rv.flags;
+  const W = yoko(), H = tate(), D = d();
+  // 余白: 左120(たて) 右60 上70 下110(横)
+  const s = Math.min(700/W, 330/H);
+  const bw = W*s, bh = H*s;
+  const bx = (960-bw)/2 + 40, by = (560-180-bh)/2 + 70;
+
+  const g = svgEl('g',{});
+  txt(g, 480, 40, '真上から見た図', 26, '#78909c');
+
+  // 箱
+  g.appendChild(svgEl('rect',{x:bx,y:by,width:bw,height:bh,fill:'#fff8e1',
+    stroke:'#8d6e63','stroke-width':6}));
+  // ボール(円)
+  for(let i=0;i<mRows();i++){
+    for(let j=0;j<mCols();j++){
+      const cx = bx+(j+0.5)*D*s, cy = by+(i+0.5)*D*s;
+      g.appendChild(svgEl('circle',{cx,cy,r:D/2*s-1.5,fill:'#bbdefb',
+        stroke:'#1976d2','stroke-width':4}));
+    }
+  }
+  const c0x = bx+0.5*D*s, c0y = by+0.5*D*s; // 左上の円の中心
+
+  // ── 補助線 ──
+  if(flags.has('radius')){
+    const rShown = S.type==='jun' || rv.f.has(2);
+    line(g, c0x, c0y, c0x+D/2*s, c0y, COL.radius, 7);
+    g.appendChild(svgEl('circle',{cx:c0x,cy:c0y,r:6,fill:COL.radius}));
+    txt(g, c0x+D/4*s, c0y-14, rShown?`半径 ${S.r}cm`:'半径 ？cm', 26, COL.radius);
+  }
+  if(flags.has('diameter')){
+    line(g, c0x, c0y-D/2*s, c0x, c0y+D/2*s, COL.diameter, 7);
+    txt(g, c0x, c0y+D/2*s+30, `直径 ${D}cm`, 26, COL.diameter);
+  }
+  if(flags.has('tate')){
+    bracket(g, bx-34, by, bx-34, by+bh, COL.tate);
+    txt(g, bx-56, by+bh/2+9, `たて`, 26, COL.tate, 'end');
+    txt(g, bx-56, by+bh/2+42, `${H}cm`, 28, COL.tate, 'end');
+  } else {
+    txt(g, bx-50, by+bh/2+9, 'たて', 26, '#888', 'end');
+  }
+  if(flags.has('yoko')){
+    // 各円に横向きの直径を引き、d cmずつ積み上がる様子を見せる
+    for(let j=0;j<mCols();j++){
+      const cx = bx+(j+0.5)*D*s;
+      line(g, cx-D/2*s, c0y, cx+D/2*s, c0y, COL.yoko, 5, '2 8');
+      txt(g, cx, by-12, `${D}`, 24, COL.yoko);
+    }
+    bracket(g, bx, by+bh+34, bx+bw, by+bh+34, COL.yoko);
+    txt(g, bx+bw/2, by+bh+74, `横 ${W}cm`, 28, COL.yoko);
+  } else {
+    const given = S.type==='gyaku'; // 逆算では横は問題で与えられている
+    txt(g, bx+bw/2, by+bh+44, given?`横 ${W}cm`:'横', 26, given?COL.yoko:'#888');
+    if(given) bracket(g, bx, by+bh+66, bx+bw, by+bh+66, COL.yoko);
+  }
+  if(flags.has('divide')){
+    // 逆算: 横をn等分するたての線
+    for(let k=1;k<mCols();k++){
+      line(g, bx+k*D*s, by-8, bx+k*D*s, by+bh+8, COL.diameter, 4, '10 8');
+    }
+    const dShown = rv.f.has(1);
+    for(let j=0;j<mCols();j++){
+      txt(g, bx+(j+0.5)*D*s, by-14, dShown?`${D}cm`:'？cm', 24, COL.diameter);
+    }
+  }
+  fig.appendChild(g);
+}
+
+// ============================== 図: 立体図 ==============================
+function drawBox3d(fig){
+  const rv = revealed();
+  const flags = rv.flags;
+  const W = yoko(), Dp = tate(), Hh = d(), D = d();
+  // 奥行きの傾き。√(kx²+ky²)<1 だと奥の列が手前の列に少し重なって見え、
+  // 「ぴったり接している」感が出る(1を超えると列間にすき間が見えてしまう)
+  const kx = 0.42, ky = 0.52;
+  const s = Math.min( 600/(W+kx*Dp), 250/(Hh+ky*Dp) );
+  const bw = W*s, bd = Dp*s, bh2 = Hh*s;
+  const dx = bd*kx, dy = bd*ky;
+  const x0 = (960 - (bw+dx))/2 - 50;
+  const y0 = 430; // 前面の底辺
+  // 頂点 (F=手前 B=奥 / T=上 B=下)
+  const FBL=[x0,y0], FBR=[x0+bw,y0], FTL=[x0,y0-bh2], FTR=[x0+bw,y0-bh2];
+  const BTL=[FTL[0]+dx,FTL[1]-dy], BTR=[FTR[0]+dx,FTR[1]-dy];
+  const BBL=[FBL[0]+dx,FBL[1]-dy], BBR=[FBR[0]+dx,FBR[1]-dy];
+  const P = a=>a.join(',');
+
+  const g = svgEl('g',{});
+  txt(g, 480, 40, '箱の図', 26, '#78909c');
+
+  // 箱の内側(床→奥の壁→左の壁) → 球 → 手前の壁・右の壁 の順に描く
+  g.appendChild(svgEl('polygon',{points:[P(FBL),P(FBR),P(BBR),P(BBL)].join(' '),
+    fill:'#d9a05e', stroke:'#8d5524','stroke-width':2}));
+  g.appendChild(svgEl('polygon',{points:[P(BBL),P(BBR),P(BTR),P(BTL)].join(' '),
+    fill:'#b97b3f', stroke:'#8d5524','stroke-width':3}));
+  g.appendChild(svgEl('polygon',{points:[P(FBL),P(BBL),P(BTL),P(FTL)].join(' '),
+    fill:'#a86a34', stroke:'#8d5524','stroke-width':3}));
+  // 球用グラデーション
+  const defs = svgEl('defs',{});
+  const gr = svgEl('radialGradient',{id:'ballG',cx:'35%',cy:'30%',r:'75%'});
+  gr.appendChild(svgEl('stop',{offset:'0%','stop-color':'#e3f2fd'}));
+  gr.appendChild(svgEl('stop',{offset:'55%','stop-color':'#64b5f6'}));
+  gr.appendChild(svgEl('stop',{offset:'100%','stop-color':'#1565c0'}));
+  defs.appendChild(gr);
+  g.appendChild(defs);
+  // 球: 床の上に置く(中心の高さ=半径)。奥の行(i=0)から手前へ描く
+  for(let i=0;i<mRows();i++){
+    const f = 1 - (i+0.5)/mRows();   // 手前からの奥行き割合(奥ほど大)
+    for(let j=0;j<mCols();j++){
+      const cx = x0 + (j+0.5)*D*s + dx*f;
+      const cy = y0 - dy*f - S.r*s;
+      // 接地面の影
+      g.appendChild(svgEl('ellipse',{cx, cy:y0-dy*f-2, rx:S.r*s*0.62, ry:S.r*s*0.16,
+        fill:'rgba(80,45,10,0.22)'}));
+      g.appendChild(svgEl('circle',{cx,cy,r:S.r*s*0.995,fill:'url(#ballG)',
+        stroke:'#0d47a1','stroke-width':2}));
+    }
+  }
+  // 手前の壁・右の壁(球の下側を隠す)
+  g.appendChild(svgEl('polygon',{points:[P(FBL),P(FBR),P(FTR),P(FTL)].join(' '),
+    fill:'#f6c98e', stroke:'#8d5524','stroke-width':5}));
+  g.appendChild(svgEl('polygon',{points:[P(FBR),P(BBR),P(BTR),P(FTR)].join(' '),
+    fill:'#e0a45f', stroke:'#8d5524','stroke-width':5}));
+
+  // ラベル(値は分かった段階で表示)
+  const vTate = rv.f.has(2)&&S.type==='jun' ? ` ${Dp}cm` : '';
+  const vYoko = (rv.f.has(3)&&S.type==='jun')||S.type==='gyaku' ? ` ${W}cm` : '';
+  txt(g, BTL[0]-bd*0.2-40, BTL[1]-16, 'たて'+vTate, 26, flags.has('tate')?COL.tate:'#666');
+  txt(g, x0+bw/2, y0+44, '横'+vYoko, 26, flags.has('yoko')||S.type==='gyaku'?COL.yoko:'#666');
+  if(flags.has('height')){
+    bracket(g, FBR[0]+dx+30, BBR[1], FBR[0]+dx+30, BTR[1], COL.height);
+    txt(g, FBR[0]+dx+50, (BBR[1]+BTR[1])/2+9, `高さ ${Hh}cm`, 26, COL.height, 'start');
+  } else {
+    txt(g, FBR[0]+dx+44, (BBR[1]+BTR[1])/2+9, '高さ', 26, '#666', 'start');
+  }
+  fig.appendChild(g);
+}
+
+// ============================== 描画まとめ ==============================
+function render(){
+  document.getElementById('problem').innerHTML = problemText();
+  const fig = document.getElementById('fig');
+  fig.innerHTML='';
+  if(S.view==='top') drawTop(fig); else drawBox3d(fig);
+  renderPanel();
+
+  // ボタン類
+  document.querySelectorAll('#typeSeg button').forEach(b=>
+    b.classList.toggle('on', b.dataset.type===S.type));
+  document.querySelectorAll('#arrSeg button').forEach(b=>{
+    b.classList.toggle('on', b.dataset.arr===S.arr);
+    if(b.dataset.arr==='grid') b.disabled = (S.type==='gyaku');
+  });
+  document.getElementById('viewBtn').textContent =
+    S.view==='3d' ? '真上から見る' : '立体の図を見る';
+  const steps = buildSteps();
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.disabled = S.step>=steps.length;
+  nextBtn.textContent = S.step>=steps.length ? 'おしまい' : 'つぎへ ▶';
+  document.getElementById('stepInfo').textContent = `${S.step} / ${steps.length}`;
+  renderNumset();
+}
+
+// ============================== 数値入力 ==============================
+function renderNumset(){
+  const el = document.getElementById('numset');
+  const mk = (id,label,val)=>`<label>${label}</label><input type="number" id="${id}" value="${val}">`;
+  let html = mk('inR', S.type==='gyaku'?'半径(答え)':'半径', S.r);
+  if(S.arr==='grid'){
+    html += mk('inRows','たての数',S.rows) + mk('inCols','横の数',S.cols);
+  } else {
+    html += mk('inN','こ数',S.n);
+  }
+  // 再描画で入力中の値が消えないよう、構造が変わった時だけ作り直す
+  if(el.dataset.shape !== S.type+S.arr){
+    el.innerHTML = html;
+    el.dataset.shape = S.type+S.arr;
+  }
+}
+function applyInput(){
+  const warn = document.getElementById('warn');
+  const r = +document.getElementById('inR').value;
+  if(!Number.isInteger(r) || r<1 || r>9){ warn.textContent='半径は1〜9で入れてね'; return; }
+  if(S.arr==='grid'){
+    const rows = +document.getElementById('inRows').value;
+    const cols = +document.getElementById('inCols').value;
+    if(!Number.isInteger(rows)||rows<2||rows>3){ warn.textContent='たての数は2〜3で入れてね'; return; }
+    if(!Number.isInteger(cols)||cols<2||cols>6){ warn.textContent='横の数は2〜6で入れてね'; return; }
+    S.rows=rows; S.cols=cols;
+  } else {
+    const n = +document.getElementById('inN').value;
+    if(!Number.isInteger(n)||n<2||n>8){ warn.textContent='こ数は2〜8で入れてね'; return; }
+    S.n=n;
+  }
+  warn.textContent='';
+  S.r=r;
+  newProblem();
+}
+function randomize(){
+  const ri = (a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  S.r = ri(1,5);
+  if(S.arr==='grid'){ S.rows = ri(2,3); S.cols = ri(2,4); }
+  else { S.n = ri(2,6); }
+  document.getElementById('warn').textContent='';
+  const el = document.getElementById('numset');
+  el.dataset.shape='';   // 入力欄を新しい値で作り直す
+  newProblem();
+}
+function newProblem(){
+  S.step=0; S.view='3d';
+  render();
+}
+
+// ============================== イベント ==============================
+document.getElementById('typeSeg').addEventListener('click',e=>{
+  const t = e.target.dataset.type; if(!t) return;
+  S.type=t;
+  if(t==='gyaku') S.arr='row';
+  document.getElementById('numset').dataset.shape='';
+  newProblem();
+});
+document.getElementById('arrSeg').addEventListener('click',e=>{
+  const a = e.target.dataset.arr; if(!a || e.target.disabled) return;
+  S.arr=a;
+  document.getElementById('numset').dataset.shape='';
+  newProblem();
+});
+document.getElementById('applyBtn').addEventListener('click',applyInput);
+document.getElementById('randBtn').addEventListener('click',randomize);
+document.getElementById('viewBtn').addEventListener('click',()=>{
+  S.view = S.view==='3d' ? 'top' : '3d';
+  render();
+});
+document.getElementById('nextBtn').addEventListener('click',()=>{
+  const steps = buildSteps();
+  if(S.step>=steps.length) return;
+  const st = steps[S.step];
+  S.step++;
+  if(st.view) S.view = st.view;
+  render();
+});
+document.getElementById('backBtn').addEventListener('click',()=>{
+  if(S.step<=0) return;
+  S.step--;
+  S.view = autoViewAt(S.step);
+  render();
+});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  S.step=0; S.view='3d'; render();
+});
+
+render();
+</script>
+</body>
+</html>
